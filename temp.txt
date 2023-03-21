@@ -1,0 +1,119 @@
+
+using System;
+using System.Collections.Generic;
+using System.Text;
+using ESRI.ArcGIS.Geodatabase;
+using ESRI.ArcGIS.Geometry;
+using ESRI.ArcGIS.SOESupport;
+namespace LRSLocator
+{
+    /// <summary>
+    /// Handles REST calls that take a Ctrl Section Mile Point as input and return the Point as output
+    /// </summary>
+    public class GetPointFromCtrlSectMilePointHandler : IRESTHandler
+    {
+
+        #region RESTHandler Members
+        // Taskes as input Control Section, BMP and EMP
+
+        private RESTContext _context;
+        public object HandleRequest(RESTContext context)
+        {
+            this._context = context;
+
+            long? wkid;
+            ISpatialReference spatialReference = null;
+            try
+            {
+                if (context.OperationInput.TryGetAsLong("Output Spatial Reference", out wkid) && wkid.HasValue)
+                {
+                    IGeometryServer geometryServer = new GeometryServerClass();
+                    spatialReference = geometryServer.FindSRByWKID("", (int)(wkid.Value), -1, true, true);
+                }
+            }
+            catch (Exception)
+            {
+                return JSONHelper.BuildErrorObject(400, "Invalid Spatial Reference.");
+            }
+
+            string ctrlSect;
+            if (!context.OperationInput.TryGetString("CtrlSect", out ctrlSect))
+                return JSONHelper.BuildErrorObject(400, "Invalid Control Section.");
+
+            double? beginMilePoint;
+            if (!context.OperationInput.TryGetAsDouble("Begin_MilePoint", out beginMilePoint))
+                return JSONHelper.BuildErrorObject(400, "Invalid Begin Mile Point.");
+
+            //double? endMilePoint;
+            //if (!context.OperationInput.TryGetAsDouble("End_MilePoint", out endMilePoint))
+            //    return JSONHelper.BuildErrorObject(400, "Invalid End MilePoint.");
+
+            byte[] result = identifyFeatures(ctrlSect, beginMilePoint, spatialReference);
+
+            return result;
+        }
+
+        #endregion
+
+        private byte[] identifyFeatures(string ctrlSect, double? MilePoint, ISpatialReference spatialReference)
+        {
+            using (ComReleaser comReleaser = new ComReleaser())
+            {
+                float measureValue = 0;
+                // float endMeasureValue = 0;
+
+                IQueryFilter queryFilter = new QueryFilterClass();
+                queryFilter.WhereClause = "ctrl_sect_ln_nbr = '" + ctrlSect + "' AND ctrl_sect_ln_begin_mpt_ms <= " + MilePoint.ToString() + " AND ctrl_sect_ln_end_mpt_ms >= " + MilePoint.ToString();
+                
+                comReleaser.ManageLifetime(queryFilter);
+
+                int iIDCtrlSectBeginDFO = _context.IntersectionFeatureClass.Fields.FindField("ctrl_sect_ln_begin_dfo_ms");
+                int iIDCtrlSectBeginMilePoint = _context.IntersectionFeatureClass.Fields.FindField("ctrl_sect_ln_begin_mpt_ms");
+
+                IFeatureCursor featureCursor = _context.IntersectionFeatureClass.Search(queryFilter, false);
+                comReleaser.ManageLifetime(featureCursor);
+                IFeature ctrlSectionfeature;
+                
+                while ((ctrlSectionfeature = featureCursor.NextFeature()) != null)
+                {
+                    if (ctrlSectionfeature.Shape == null || ctrlSectionfeature.Shape.IsEmpty)
+                        continue;
+
+                    float beginDFO = float.Parse(ctrlSectionfeature.get_Value(iIDCtrlSectBeginDFO).ToString());
+                    float beginMPTMS = float.Parse(ctrlSectionfeature.get_Value(iIDCtrlSectBeginMilePoint).ToString());
+                    float beginMPT = (float)MilePoint;
+                    
+                    measureValue = beginDFO + (beginMPT - beginMPTMS);
+                    
+                    //NEW
+                    // Use IMSegmentation to find the point on the highway with this measure value
+                    IMSegmentation3 segmentation = ctrlSectionfeature.Shape as IMSegmentation3;
+                    IGeometryCollection pointCollection = segmentation.GetPointsAtM(measureValue, 0);
+                    if (pointCollection != null && pointCollection.GeometryCount > 0)
+                    {
+                        IPoint point = pointCollection.get_Geometry(0) as IPoint;
+                        if (spatialReference != null)
+                            point.Project(spatialReference);
+                        // Convert the milepoint into JSON. Warning: This adds bits to the rounding on some coordinates
+                        JsonObject jsonPoint = Conversion.ToJsonObject(point);
+                        jsonPoint.AddObject("CtrlSection", ctrlSectNbr);
+                        jsonPoint.AddObject("MilePoint", resultCtrlSection);
+                        return Encoding.UTF8.GetBytes(jsonPoint.ToJson());
+                    }
+                    
+                    //OLD
+                    //IGeometryCollection geometryCollection = (ctrlSectionfeature.Shape as IMSegmentation3).GetSubcurveBetweenMs(beginMeasureValue, endMeasureValue);
+                    //if (geometryCollection != null && geometryCollection.GeometryCount > 0)
+                    //{
+                    //    IPolyline polyline = geometryCollection as IPolyline;
+                    //    JsonObject jsonPolyline = Conversion.ToJsonObject(polyline);
+                    //    return Encoding.UTF8.GetBytes(jsonPolyline.ToJson());
+                    //}
+                }
+                // Add correction handling HERE when featureCursor.NextFeature()) == null
+                return Encoding.UTF8.GetBytes("Input Values for Begin-End Milepoints are not within the Control Section Limits.") ;
+           }
+        }
+                
+    }
+}
