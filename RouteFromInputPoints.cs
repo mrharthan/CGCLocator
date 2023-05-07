@@ -60,8 +60,7 @@ namespace LRSLocator
             classLoader.Load(cursor, null, ref rowsInCursor, ref rowsLocated);
 
             // Solve the route using current settings           
-            // And check the GPMessages after a successful solve to see if there are any warning or informational messages.      
-
+            // And check the GPMessages after a successful solve to see if there are any warning or informational messages.
             try
             {
                 bool IsPartialSolution = routeSolver.Solve(context, gpMessages, null);
@@ -92,8 +91,8 @@ namespace LRSLocator
             this.network_path = resultFC;
 
             //--SAVE THE NETWORK PATH TO LOCAL DRIVE FOR VISUAL INTERPRETATION OF THE RESULT----
-            // string outputFilePath = @"\\txdot4awgisdwa.dot.state.tx.us\D$\mxd\dev\LRS\LRSTest\AutoRte.lyr";
-            string outputFilePath = @"\\txdot4wvdgdtk01.dot.state.tx.us\D$\Projects\CGCLocator\Output\AutoRte.lyr";
+            string outputFilePath = @"\\txdot4awgisdwa.dot.state.tx.us\D$\mxd\dev\LRS\LRSTest\AutoRte.lyr";
+            // string outputFilePath = @"\\txdot4wvdgdtk01.dot.state.tx.us\D$\Projects\CGCLocator\Output\AutoRte.lyr";
             // string outputFilePath = @"\\L-1G5VPQ2.dot.state.tx.us\D$\Projects\CGCLocator\Output\AutoRte.lyr";            
             //----------------------------------------------------------------------------------
             try
@@ -187,8 +186,8 @@ namespace LRSLocator
                 stopFeature.set_Value(ptIdx, position);
                 stopFeature.Store();
             }
-            return ptFC;
 
+            return ptFC;
         }
 
 

@@ -110,8 +110,10 @@
     <Compile Include="JSONHelper.cs" />
     <Compile Include="LRSLocator.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RelationClassController.cs" />
     <Compile Include="RESTContext.cs" />
     <Compile Include="RouteFromInputPoints.cs" />
+    <Compile Include="TransitDataContract.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="mykey.snk" />

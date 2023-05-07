@@ -10,7 +10,7 @@ namespace LRSLocator
     /// Data contract for Multi-Routing Polyline Tools
     /// </summary>
     [DataContract]
-    public class AutoDataContract
+    public class TransitDataContract
     {
         [DataMember(Order = 1, Name = "Total Miles")]
         public double TotalMiles { get; set; }
@@ -27,7 +27,7 @@ namespace LRSLocator
         [DataMember(Order = 1, Name = "Geometry")]
         public IPolyline Geometry { get; set; }
 
-        public AutoDataContract()
+        public TransitDataContract()
         {
             this.TotalMiles = double.NaN;
             this.TotalMinutes = double.NaN;

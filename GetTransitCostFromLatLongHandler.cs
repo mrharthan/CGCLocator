@@ -108,7 +108,16 @@ namespace LRSLocator
                 userPoints.Add(last_point);
 
                 IGeometryServer geometryServer = new GeometryServerClass();
-                IGeometryCollection geometryCollection = new GeometryBag() as IGeometryCollection;                                
+                IGeometryCollection geometryCollection = new GeometryBag() as IGeometryCollection;
+
+                // Find the closest Traveler Metrics feature at the beginning of the traversal -- Traveler Income
+                List<IFeature> beginTravFeatures = findClosestFeatures(first_point, "Traveler Data");
+
+                if (beginTravFeatures.Count == 0)
+                {
+                    //We have a problem. Return null
+                    return JSONHelper.BuildErrorObjectAsBytes(400, "Could not find Traveler Income at begin point location.");
+                }
 
                 // Find the closest Trip Metrics features at each end of the traversal -- Trip Time
                 List<IFeature> beginTripFeatures = findClosestFeatures(first_point, "Trip Data");
@@ -125,7 +134,8 @@ namespace LRSLocator
                     //We have a problem. Return null
                     return JSONHelper.BuildErrorObjectAsBytes(400, "Could not find Trip Speed at end point location.");
                 }
-                
+
+                List<IFeature> firstMetrics = getMetricsLimitsFeatures(beginTravFeatures, inputTFrame, "Traveler Data", true);
                 // IF the return is two features, it is only because the User-defined point falls preceisely between two trip features.  In this case, the walking M-value from either feature should match.
                 List<IFeature> firstLRMs = getMetricsLimitsFeatures(beginTripFeatures, inputTFrame, "Trip Data", true);
                 first_avgspeed = transitSpeedAvg;
@@ -165,7 +175,7 @@ namespace LRSLocator
                 // Get Metrics Features or Transit_TAZ Features contained within the 5-meter buffer
                 getPathControlSegments.getCtrlFeatures(networkPath, _context, "Transit");
                 // Filter getPathControlSegments results further for true segment traversal time
-                List<IFeature> MetricsFeatures = getPathControlSegments.Control_FeaturesList;
+                List<IFeature> MetricsFeatures = getPathControlSegments.Auto_FeaturesList;
 
                 // Find the closest Traveler Metrics feature at the beginning of the highest mode traversal -- Traveler Income
                 // Transit Mode Hierarchy: '1' = Rail  '2' = Bus  '3' = Pedestrian
@@ -441,10 +451,11 @@ namespace LRSLocator
 
                 if (eventType.Equals("Trip Data"))
                     featureCursor = _context.LrsWalkTripMetricFeatureClass.Search(spatialFilter, false);
-                else if (eventType.Equals("Traveler Data"))
-                    featureCursor = _context.LrsAutoTravMetricFeatureClass.Search(spatialFilter, false);
-                else  // "Parking Data"
-                    featureCursor = _context.TransferStationFeatureClass.Search(spatialFilter, false);                    
+                else
+                {
+                    if (eventType.Equals("Traveler Data"))
+                        featureCursor = _context.LrsWalkTravMetricFeatureClass.Search(spatialFilter, false);
+                }                                   
                 
                 comReleaser.ManageLifetime(featureCursor);
 

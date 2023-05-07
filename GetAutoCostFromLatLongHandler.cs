@@ -85,12 +85,10 @@ namespace LRSLocator
             using (ComReleaser comReleaser = new ComReleaser())
             {
                 AutoDataContract resultLRMData = new AutoDataContract();
-                JsonObject resultCollection = new JsonObject();
-                
+                JsonObject resultCollection = new JsonObject();                
                 List<IPoint> userPoints = new List<IPoint>();
                 IPoint first_point = new PointClass();
                 IPoint last_point = new PointClass();
-
                 double beginMeasure = 0.0;
                 double endMeasure = 0.0;
                 double beginSegLen = 0.0;
@@ -105,10 +103,7 @@ namespace LRSLocator
 
                 last_point.PutCoords(lastX, lastY);
                 last_point.Project((_context.HighwayFeatureClass as IGeoDataset).SpatialReference);
-                userPoints.Add(last_point);
-
-                IGeometryServer geometryServer = new GeometryServerClass();
-                IGeometryCollection geometryCollection = new GeometryBag() as IGeometryCollection;
+                userPoints.Add(last_point);                
 
                 // Find the closest Traveler Metrics feature at the beginning of the traversal -- Traveler Income
                 List<IFeature> beginTravFeatures = findClosestFeatures(first_point, "Traveler Data");
@@ -162,9 +157,7 @@ namespace LRSLocator
                     if (beginSegLen > 0.0)
                         beginSegTime = (beginSegLen / first_avgspeed) * 60;                                                            
                 }
-                
-                geometryCollection.AddGeometry((firstGeometry.Shape as IMSegmentation3).GetSubcurveBetweenMs(beginMeasure, first_edfo) as IGeometry);
-
+                // First Feature collection by spatial operation would go here
                 foreach (IFeature lastM in lastLRMs)
                 {
                     endMeasure = identifyMValue(last_point, lastM);   // User-Defined End M Value
@@ -185,8 +178,10 @@ namespace LRSLocator
                 // Get Metrics Features or Auto_TAZ Features contained within the 5-meter buffer
                 getPathControlSegments.getCtrlFeatures(networkPath, _context, "Auto");
                 // Filter getPathControlSegments results further for true segment traversal time
-                List<IFeature> MetricsFeatures = getPathControlSegments.Control_FeaturesList;
-
+                List<IFeature> MetricsFeatures = getPathControlSegments.Auto_FeaturesList;
+                // Capture the network path as IPolyline for JSON Output
+                IPolyline polyline = (networkPath.Shape as IPolyline);
+                
                 // DELIVERY                    
                 bool bypass = false;
                 string hwyID = "";
@@ -195,7 +190,7 @@ namespace LRSLocator
                 double nxtSegLen = 0.0;
                 double nxtSegTime = 0.0;
                 double totalSegLen = beginSegLen + endSegLen;
-                double totalSegTime = beginSegTime + endSegTime;                                                    
+                double totalSegTime = beginSegTime + endSegTime;                
 
                 foreach (IFeature mFeatures in MetricsFeatures)
                 {
@@ -207,9 +202,9 @@ namespace LRSLocator
                         bypass = true;  // first segment attributes accounted for                                                 
                     else if (hwyID.Equals(last_rteid) && fromM <= endMeasure && toM >= endMeasure)
                     {
-                        geometryCollection.AddGeometry((mFeatures.Shape as IMSegmentation3).GetSubcurveBetweenMs(fromM, endMeasure) as IGeometry);
-                        bypass = true;  // last segment attributes accounted for
-                    }                            
+                        // Feature collection by spatial operation would go here
+                        bypass = true;  // last segment attributes
+                    }
                     else if (inputTFrame.Equals("1:AllDay:Weekday"))
                         autoSpeedAvg = Math.Round(float.Parse(mFeatures.get_Value(mFeatures.Fields.FindField(_context.LrsAutoTripMetricFeatureClass_WDAllDayAASField)).ToString()), 0);
                     else if (inputTFrame.Equals("2:EarlyAM:Weekday"))
@@ -241,7 +236,7 @@ namespace LRSLocator
                         continue;
                     else
                     {
-                        geometryCollection.AddGeometry((mFeatures.Shape as IMSegmentation3).GetSubcurveBetweenMs(fromM, toM) as IGeometry);
+                        // Feature collection by spatial operation would go here
 
                         if (toM > fromM)
                         {
@@ -255,14 +250,13 @@ namespace LRSLocator
                             totalSegTime = totalSegTime + nxtSegTime;
                         }
                     }
-                }               
+                }
 
-                resultLRMData = calculateAutoResults(totalSegLen, totalSegTime, autoIncomeAvg, parkpenaltyMin, spatialRef);
+                resultLRMData = calculateAutoResults(totalSegLen, totalSegTime, autoIncomeAvg, parkpenaltyMin, spatialRef);                
 
-                if (geometryCollection != null && geometryCollection.GeometryCount > 0)
+                if (polyline != null)
                 {
-                    IPolyline6 polyline = geometryCollection as IPolyline6;
-                    JsonObject jsonPolyline = new JsonObject();
+                    JsonObject jsonPolyline = new JsonObject();                    
                     jsonPolyline.AddObject("Total Miles", resultLRMData.TotalMiles);
                     jsonPolyline.AddObject("Total Minutes", resultLRMData.TotalMinutes);
                     jsonPolyline.AddObject("Total Dollars", resultLRMData.TotalDollars);
@@ -272,11 +266,9 @@ namespace LRSLocator
                     i++;
                 }
 
-                return Encoding.UTF8.GetBytes(resultCollection.ToJson());
-                               
+                return Encoding.UTF8.GetBytes(resultCollection.ToJson());                               
             }
         }
-
 
         private List<IFeature> getMetricsLimitsFeatures(List<IFeature> limitsLRMFeatures, string dayTimeParam, string CtrlTable, bool firstFeature)
         {

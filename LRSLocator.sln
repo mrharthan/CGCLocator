@@ -1,9 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2013
-VisualStudioVersion = 12.0.40629.0
+VisualStudioVersion = 12.0.21005.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LRSLocator", "LRSLocator.csproj", "{A21F7398-3E22-4A21-92FF-E010C29CF590}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{5CA55CC3-C4E9-4F21-AC38-CCBDBFB6219A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

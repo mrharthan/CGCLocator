@@ -14,8 +14,13 @@ namespace LRSLocator
 {
     class GetPathControlSegments
     {
-        [System.Runtime.Serialization.DataMember(Order = 0, Name = "Control_FeaturesList")]
-        public List<IFeature> Control_FeaturesList { get; set; }
+        [System.Runtime.Serialization.DataMember(Order = 0, Name = "Auto_FeaturesList")]
+        public List<IFeature> Auto_FeaturesList { get; set; }
+        //public List<IFeature> PedTrip_FeaturesList { get; set; }
+        //public List<IFeature> BusTrip_FeaturesList { get; set; }
+        //public List<IFeature> RailTrip_FeaturesList { get; set; }
+        //public List<IFeature> BusStop_FeaturesList { get; set; }
+        //public List<IFeature> RailStation_FeaturesList { get; set; }
         public IPolygon bufferPolygon { get; set; }
 
         private RESTContext _context;
@@ -28,19 +33,25 @@ namespace LRSLocator
             // routeFetaure.Shape.Project((context.HighwayFeatureClass as IGeoDataset).SpatialReference);
             List<IFeature> ListOfSelectedCtrlFeats = new List<IFeature>();
 
-            //Create a 5-meter buffer around the solved route path
+            //Create a minimum 0.00005-meter buffer around the solved route path
             IPolygon bufferPolygon = createBufferPolygon(routeFeature);
             //bufferPolygon.Project((_context.HighwayFeatureClass as IGeoDataset).SpatialReference);
             bufferPolygon.Project(routeFeature.Shape.SpatialReference);
 
             if (ctrlMode.Equals("Auto"))    //Get the list of the Auto Trip features contained within the buffer                    
-                this.Control_FeaturesList = getCtrlPathMetricFeatures(bufferPolygon);
+                this.Auto_FeaturesList = getCtrlPathMetricFeatures(bufferPolygon);
 
-            if (ctrlMode.Equals("Transit"))    //Get the list of the Transit Trip features contained within the buffer                    
-                this.Control_FeaturesList = getMultiCtrlPathMetricFeatures(bufferPolygon);
+            if (ctrlMode.Equals("Transit"))    //Get the list of the Transit Trip features contained within the buffer
+            {
+                this.Auto_FeaturesList = getMultiCtrlPathMetricFeatures(bufferPolygon);
+                // Get Pedestrian Trip/Traveller Lines
+                // Get Bus Trip/Traveller Lines --> Also need Avg. Fares
+                // Get Rail Trip/Traveller Lines --> Also need Avg. Fares
+                // Get Rail Station Points --> transfer wait times
+                // Get Bus Stop Points --> Analyze STOP_ID in Transfer Stations for a lookup of transfer wait times.
+            }
 
-            int nbrOfFeature = this.Control_FeaturesList.Count;
-
+            int nbrOfFeature = this.Auto_FeaturesList.Count;
         }
 
         // Create a polygon of x-meter buffer around the networkpath feature
@@ -131,8 +142,7 @@ namespace LRSLocator
                 List<IFeature> ctrlFeatures = new List<IFeature>();
                 IFeature pFeature = null;
                 var currOID = 0;
-                var prevOID = 0;
-                //string ctrlSectNbr = "";
+                var prevOID = 0;                
 
                 while ((pFeature = featureCursor.NextFeature()) != null)
                 {

@@ -834,12 +834,12 @@ namespace LRSLocator
 
 
                 }// 
-                if (layerInfo.Name == "RouteAuto")
+                if (layerInfo.Name == "Route") // Auto
                 {
                     INetworkDataset nwkAutoDataset = (INetworkDataset)dataAccess.GetDataSource(mapServer.DefaultMapName, layerInfo.ID);
                     this._cgcAutoND = nwkAutoDataset;
                 }
-                else if (layerInfo.Name == "RouteTransit")
+                else if (layerInfo.Name == "Route 2")  // Transit
                 {
                     INetworkDataset nwkTransitDataset = (INetworkDataset)dataAccess.GetDataSource(mapServer.DefaultMapName, layerInfo.ID);
                     this._cgcTransitND = nwkTransitDataset;
